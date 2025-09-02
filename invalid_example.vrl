@@ -5,11 +5,13 @@
 .data = parse_json(.input) 
 .timestamp = parse_timestamp(.date, "%Y-%m-%d")
 .number = to_int(.value)
+.bad_timestamp = timestamp(2023, 12, 25, 10, 30, 0)
 
 # These are correct - should not show errors:
 .good_result = parse_cef!(.message)
 .safe_data = parse_json(.input) ?? {}
 .parsed_time = parse_timestamp(.date, "%Y-%m-%d") ?? now()
+.good_timestamp = timestamp!(2023, 12, 25, 10, 30, 0, "UTC")
 
 # This should show unknown function error:
 .bad = invalid_function(.data)

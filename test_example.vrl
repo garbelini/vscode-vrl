@@ -7,14 +7,20 @@
 .parsed_text = parse_regex!(.text_field, r"\d+")
 .parsed_kv = parse_key_value!(.kv_string)
 
+# Timestamp creation function
+.created_timestamp = timestamp!(2023, 12, 25, 10, 30, 0)
+.utc_timestamp = timestamp!(2023, 12, 25, 10, 30, 0, "UTC")
+
 # INVALID: These should show errors (missing error handling)
 .bad_data = parse_cef(.input)
 .bad_json = parse_json(.message)
 .bad_timestamp = parse_timestamp(.date, "%Y-%m-%d")
+.bad_timestamp_creation = timestamp(2023, 12, 25, 10, 30, 0)
 
 # Parse functions with error handling using null coalescing
 .safe_json = parse_json(.maybe_json) ?? {}
 .safe_timestamp = parse_timestamp(.date_text, "%Y-%m-%d") ?? now()
+.safe_timestamp_creation = timestamp(.year, .month, .day, .hour, .minute, .second) ?? now()
 
 # String functions (infallible)
 .upper_text = upcase(.text)

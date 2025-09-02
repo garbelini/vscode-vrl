@@ -673,6 +673,23 @@ export const VRL_FUNCTIONS: { [key: string]: VrlFunction } = {
         category: 'datetime',
         example: 'now()',
     },
+    timestamp: {
+        name: 'timestamp',
+        parameters: [
+            { name: 'year', type: 'int' },
+            { name: 'month', type: 'int' },
+            { name: 'day', type: 'int' },
+            { name: 'hour', type: 'int' },
+            { name: 'minute', type: 'int' },
+            { name: 'second', type: 'int' },
+            { name: 'timezone', type: 'string', optional: true },
+        ],
+        returnType: 'timestamp',
+        fallible: true,
+        description: 'Creates a timestamp from date and time components',
+        category: 'datetime',
+        example: 'timestamp!(2023, 12, 25, 10, 30, 0, "UTC")',
+    },
     to_unix_timestamp: {
         name: 'to_unix_timestamp',
         parameters: [
