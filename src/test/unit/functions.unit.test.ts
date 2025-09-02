@@ -148,17 +148,22 @@ suite('VRL Functions Unit Tests', () => {
         assert.strictEqual(timestampFunc!.fallible, true, 'timestamp should be fallible');
         assert.strictEqual(timestampFunc!.category, 'coerce');
         assert.strictEqual(timestampFunc!.returnType, 'timestamp');
-        assert.strictEqual(timestampFunc!.parameters.length, 1, 'timestamp should have 1 parameter');
-        
+        assert.strictEqual(
+            timestampFunc!.parameters.length,
+            1,
+            'timestamp should have 1 parameter'
+        );
+
         // Check parameter name and type
         const expectedParam = { name: 'value', type: 'any', optional: false };
         const actualParam = timestampFunc!.parameters[0];
-        assert.strictEqual(actualParam.name, expectedParam.name, 
-            'Parameter should be named value');
-        assert.strictEqual(actualParam.type, expectedParam.type, 
-            'Parameter should have type any');
-        assert.strictEqual(actualParam.optional || false, expectedParam.optional, 
-            'Parameter should be required');
+        assert.strictEqual(actualParam.name, expectedParam.name, 'Parameter should be named value');
+        assert.strictEqual(actualParam.type, expectedParam.type, 'Parameter should have type any');
+        assert.strictEqual(
+            actualParam.optional || false,
+            expectedParam.optional,
+            'Parameter should be required'
+        );
 
         console.log('✓ timestamp function correctly defined as type checker function');
     });
