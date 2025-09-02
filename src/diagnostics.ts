@@ -193,7 +193,11 @@ export class VrlDiagnosticsProvider {
                     match.index,
                     func
                 );
-                const hasExplicitErrorHandling = /\w+\s*,\s*\w+\s*=/.test(normalizedText);
+
+                // Check for explicit error handling - must be at the start of an assignment
+                // Look for pattern like "result, err = function_name("
+                const beforeFunction = normalizedText.substring(0, match.index);
+                const hasExplicitErrorHandling = /\w+\s*,\s*\w+\s*=\s*$/.test(beforeFunction);
 
                 const hasErrorHandling = hasBang || hasNullCoalescing || hasExplicitErrorHandling;
 
@@ -256,7 +260,9 @@ export class VrlDiagnosticsProvider {
             currentPos++;
         }
 
-        if (currentPos >= text.length) {return false;}
+        if (currentPos >= text.length) {
+            return false;
+        }
 
         currentPos++; // Skip the opening (
         parenCount = 1;
@@ -281,24 +287,33 @@ export class VrlDiagnosticsProvider {
         funcName: string,
         normalizedPosition: number
     ): { line: number; startChar: number; endChar: number } {
-        // This is a simplified approach - find the first occurrence of the function in the original text
-        // For a more accurate implementation, we'd need to map normalized positions back to original positions
+        // Find all occurrences of the function in the original text
         const lines = text.split('\n');
+        const occurrences: Array<{ line: number; startChar: number; endChar: number }> = [];
 
         for (let lineNum = 0; lineNum < lines.length; lineNum++) {
             const line = lines[lineNum];
-            const funcIndex = line.indexOf(funcName);
-            if (funcIndex !== -1) {
+            let startIndex = 0;
+            let funcIndex;
+
+            while ((funcIndex = line.indexOf(funcName, startIndex)) !== -1) {
                 // Check if this is likely a function call (followed by optional ! and ()
                 const afterFunc = line.slice(funcIndex + funcName.length);
                 if (/^[!]?\s*\(/.test(afterFunc)) {
-                    return {
+                    occurrences.push({
                         line: lineNum,
                         startChar: funcIndex,
                         endChar: funcIndex + funcName.length,
-                    };
+                    });
                 }
+                startIndex = funcIndex + 1;
             }
+        }
+
+        // For now, return the first occurrence
+        // In a more sophisticated implementation, we'd map the normalized position back to the original
+        if (occurrences.length > 0) {
+            return occurrences[0];
         }
 
         // Fallback to first line if not found

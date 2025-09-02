@@ -68,11 +68,13 @@ result, err = to_int(.value)
         // Check that each error is about missing error handling
         const expectedErrors = ['parse_cef', 'parse_json', 'parse_timestamp', 'to_int'];
 
-        expectedErrors.forEach((funcName, index) => {
-            const diagnostic = errorDiagnostics[index];
+        expectedErrors.forEach((funcName) => {
+            const diagnostic = errorDiagnostics.find((diag: any) =>
+                diag.message.includes(funcName)
+            );
             assert.ok(
-                diagnostic.message.includes(funcName),
-                `Expected error for ${funcName}, got: ${diagnostic.message}`
+                diagnostic,
+                `Expected error for ${funcName}, but it was not found in: ${errorDiagnostics.map((d: any) => d.message).join(', ')}`
             );
             assert.ok(
                 diagnostic.message.includes('error handling'),
@@ -127,6 +129,84 @@ else {
         assert.ok(
             controlFlowErrors[0].message.includes('same line'),
             'Error should mention same line rule'
+        );
+    });
+
+    test('Should properly handle multi-line function calls', async () => {
+        const testContent = `# Multi-line function calls test
+
+# This should trigger an error - missing error handling
+.result = parse_json(
+    .message
+)
+
+# This should be valid - has error handling with !
+.result2 = parse_json!(
+    .message
+)
+
+# This should be valid - has null coalescing
+.result3 = parse_json(
+    .message
+) ?? {}
+
+# This should trigger an error - nested function call without error handling
+.result4 = replace!(
+    parse_json(.nested_message),
+    "old",
+    "new"
+)
+
+# Complex multi-line example with proper error handling
+.parsed_data = parse_timestamp!(
+    .log_entry.timestamp,
+    "%Y-%m-%d %H:%M:%S"
+)`;
+
+        const mockDoc = {
+            uri: { path: 'test://multiline.vrl' },
+            languageId: 'vrl',
+            getText: () => testContent,
+            lineAt: (line: number) => ({
+                text: testContent.split('\n')[line] || '',
+            }),
+            fileName: 'multiline.vrl',
+        };
+
+        diagnosticsProvider.validateDocument(mockDoc as any);
+
+        const vscode = (global as any).vscode;
+        const allDiagnostics = vscode.languages.getDiagnostics(mockDoc.uri);
+
+        const errorDiagnostics = allDiagnostics.filter(
+            (diag: any) =>
+                diag.severity === vscode.DiagnosticSeverity.Error &&
+                diag.message.includes('error handling')
+        );
+
+        console.log(`Multi-line test: Found ${errorDiagnostics.length} error diagnostics`);
+        errorDiagnostics.forEach((diag: any, index: number) => {
+            console.log(`  ${index + 1}. Line ${diag.range.start.line}: ${diag.message}`);
+        });
+
+        // We expect exactly 2 errors:
+        // 1. Multi-line parse_json without error handling
+        // 2. Nested parse_json without error handling
+        assert.strictEqual(
+            errorDiagnostics.length,
+            2,
+            `Expected 2 error diagnostics for multi-line fallible functions without error handling, got ${errorDiagnostics.length}`
+        );
+
+        // Check that the errors are for parse_json functions
+        const parseJsonErrors = errorDiagnostics.filter((diag: any) =>
+            diag.message.includes('parse_json')
+        );
+
+        assert.strictEqual(
+            parseJsonErrors.length,
+            2,
+            'Both errors should be for parse_json functions'
         );
     });
 
