@@ -291,6 +291,17 @@ export const VRL_FUNCTIONS: { [key: string]: VrlFunction } = {
         category: 'coerce',
         example: 'to_timestamp!("2023-01-01T00:00:00Z")',
     },
+    timestamp: {
+        name: 'timestamp',
+        parameters: [
+            { name: 'value', type: 'any' },
+        ],
+        returnType: 'timestamp',
+        fallible: true,
+        description: 'Returns value if it is a timestamp, otherwise returns an error. This enables the type checker to guarantee that the returned value is a timestamp and can be used in any function that expects a timestamp.',
+        category: 'coerce',
+        example: 'timestamp!("2020-10-10T16:00:00Z")',
+    },
 
     // String Functions
     contains: {
@@ -673,23 +684,7 @@ export const VRL_FUNCTIONS: { [key: string]: VrlFunction } = {
         category: 'datetime',
         example: 'now()',
     },
-    timestamp: {
-        name: 'timestamp',
-        parameters: [
-            { name: 'year', type: 'int' },
-            { name: 'month', type: 'int' },
-            { name: 'day', type: 'int' },
-            { name: 'hour', type: 'int' },
-            { name: 'minute', type: 'int' },
-            { name: 'second', type: 'int' },
-            { name: 'timezone', type: 'string', optional: true },
-        ],
-        returnType: 'timestamp',
-        fallible: true,
-        description: 'Creates a timestamp from date and time components',
-        category: 'datetime',
-        example: 'timestamp!(2023, 12, 25, 10, 30, 0, "UTC")',
-    },
+
     to_unix_timestamp: {
         name: 'to_unix_timestamp',
         parameters: [

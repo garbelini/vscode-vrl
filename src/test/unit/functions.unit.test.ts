@@ -110,7 +110,7 @@ suite('VRL Functions Unit Tests', () => {
             },
             {
                 name: 'timestamp',
-                expectedParams: ['year', 'month', 'day', 'hour', 'minute', 'second', 'timezone'],
+                expectedParams: ['value'],
                 expectedReturnType: 'timestamp',
             },
         ];
@@ -146,32 +146,21 @@ suite('VRL Functions Unit Tests', () => {
         assert.ok(timestampFunc, 'timestamp function should exist');
         assert.strictEqual(timestampFunc!.name, 'timestamp');
         assert.strictEqual(timestampFunc!.fallible, true, 'timestamp should be fallible');
-        assert.strictEqual(timestampFunc!.category, 'datetime');
+        assert.strictEqual(timestampFunc!.category, 'coerce');
         assert.strictEqual(timestampFunc!.returnType, 'timestamp');
-        assert.strictEqual(timestampFunc!.parameters.length, 7, 'timestamp should have 7 parameters');
+        assert.strictEqual(timestampFunc!.parameters.length, 1, 'timestamp should have 1 parameter');
         
-        // Check parameter names and types
-        const expectedParams = [
-            { name: 'year', type: 'int', optional: false },
-            { name: 'month', type: 'int', optional: false },
-            { name: 'day', type: 'int', optional: false },
-            { name: 'hour', type: 'int', optional: false },
-            { name: 'minute', type: 'int', optional: false },
-            { name: 'second', type: 'int', optional: false },
-            { name: 'timezone', type: 'string', optional: true }
-        ];
+        // Check parameter name and type
+        const expectedParam = { name: 'value', type: 'any', optional: false };
+        const actualParam = timestampFunc!.parameters[0];
+        assert.strictEqual(actualParam.name, expectedParam.name, 
+            'Parameter should be named value');
+        assert.strictEqual(actualParam.type, expectedParam.type, 
+            'Parameter should have type any');
+        assert.strictEqual(actualParam.optional || false, expectedParam.optional, 
+            'Parameter should be required');
 
-        expectedParams.forEach((expectedParam, index) => {
-            const actualParam = timestampFunc!.parameters[index];
-            assert.strictEqual(actualParam.name, expectedParam.name, 
-                `Parameter ${index} should be named ${expectedParam.name}`);
-            assert.strictEqual(actualParam.type, expectedParam.type, 
-                `Parameter ${index} should have type ${expectedParam.type}`);
-            assert.strictEqual(actualParam.optional || false, expectedParam.optional, 
-                `Parameter ${index} optional status should be ${expectedParam.optional}`);
-        });
-
-        console.log('✓ timestamp function correctly defined with proper signature');
+        console.log('✓ timestamp function correctly defined as type checker function');
     });
 });
 
