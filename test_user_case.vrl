@@ -1,0 +1,6 @@
+.log = parse_json(.message) ??
+    parse_common_log(message) ??
+    parse_groks(message, patterns: [
+        "%{TIMESTAMP_ISO8601:timestamp} %{_message}",
+    ]) ??
+    message

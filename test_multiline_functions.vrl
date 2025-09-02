@@ -1,0 +1,35 @@
+# Test file for multi-line function calls
+
+# This should trigger an error - missing error handling
+.result = parse_json(
+    .message
+)
+
+# This should be valid - has error handling with !
+.result2 = parse_json!(
+    .message
+)
+
+# This should be valid - has null coalescing 
+.result3 = parse_json(
+    .message
+) ?? {}
+
+# This should trigger an error - nested function call without error handling
+.result4 = replace!(
+    parse_json(.nested_message),
+    "old",
+    "new"
+)
+
+# Complex multi-line example with proper error handling
+.parsed_data = parse_timestamp!(
+    .log_entry.timestamp,
+    "%Y-%m-%d %H:%M:%S"
+)
+
+# Multi-line with multiple parameters
+.formatted = format_timestamp!(
+    parse_timestamp!(.date_string, "%Y-%m-%d"),
+    "%Y/%m/%d"
+)
