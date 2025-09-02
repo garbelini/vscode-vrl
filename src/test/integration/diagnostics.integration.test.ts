@@ -210,6 +210,49 @@ else {
         );
     });
 
+    test('Should handle complex multi-line null coalescing chain correctly', async () => {
+        // Test case from GitHub comment
+        const testContent = `.log = parse_json(.message) ??
+    parse_common_log(message) ??
+    parse_groks(message, patterns: [
+        "%{TIMESTAMP_ISO8601:timestamp} %{_message}",
+    ]) ??
+    message`;
+
+        const mockDoc = {
+            uri: { path: 'test://complex-multiline.vrl' },
+            languageId: 'vrl',
+            getText: () => testContent,
+            lineAt: (line: number) => ({
+                text: testContent.split('\n')[line] || '',
+            }),
+            fileName: 'complex-multiline.vrl',
+        };
+
+        diagnosticsProvider.validateDocument(mockDoc as any);
+
+        const vscode = (global as any).vscode;
+        const allDiagnostics = vscode.languages.getDiagnostics(mockDoc.uri);
+
+        const errorDiagnostics = allDiagnostics.filter(
+            (diag: any) =>
+                diag.severity === vscode.DiagnosticSeverity.Error &&
+                diag.message.includes('error handling')
+        );
+
+        console.log(`Complex null coalescing test: Found ${errorDiagnostics.length} error diagnostics`);
+        errorDiagnostics.forEach((diag: any, index: number) => {
+            console.log(`  ${index + 1}. Line ${diag.range.start.line}: ${diag.message}`);
+        });
+
+        // Should have NO errors because all functions use null coalescing properly
+        assert.strictEqual(
+            errorDiagnostics.length,
+            0,
+            `Expected no error diagnostics for properly chained null coalescing, got ${errorDiagnostics.length}. This is a multi-line null coalescing chain with parse_json ?? parse_common_log ?? parse_groks which should be valid VRL.`
+        );
+    });
+
     test('Should not flag valid VRL code', async () => {
         const testContent = `# Valid VRL code
 .good_result = parse_cef!(.input)

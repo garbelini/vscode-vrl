@@ -1,0 +1,7 @@
+# Test case for multi-line null coalescing that should be valid VRL
+.log = parse_json(.message) ??
+    parse_common_log(message) ??
+    parse_groks(message, patterns: [
+        "%{TIMESTAMP_ISO8601:timestamp} %{_message}",
+    ]) ??
+    message

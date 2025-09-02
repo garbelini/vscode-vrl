@@ -172,4 +172,39 @@ suite('Multi-line Function Call Tests', () => {
             'Should recognize ?? as proper error handling'
         );
     });
+
+    test('Complex multi-line null coalescing chain should be valid', () => {
+        // This is the exact test case from the GitHub comment
+        const multiLineCode = `.log = parse_json(.message) ??
+    parse_common_log(message) ??
+    parse_groks(message, patterns: [
+        "%{TIMESTAMP_ISO8601:timestamp} %{_message}",
+    ]) ??
+    message`;
+
+        const fallibleCalls = findFallibleFunctionCalls(multiLineCode);
+
+        console.log(`Complex multi-line null coalescing - Found ${fallibleCalls.length} function calls`);
+        fallibleCalls.forEach((call) => {
+            console.log(`  - ${call.funcName}: hasErrorHandling=${call.hasErrorHandling}`);
+        });
+
+        // Should find 3 fallible functions: parse_json, parse_common_log, parse_groks
+        assert.strictEqual(fallibleCalls.length, 3, 'Should detect all 3 fallible functions');
+        
+        // All should have error handling due to null coalescing
+        fallibleCalls.forEach((call) => {
+            assert.strictEqual(
+                call.hasErrorHandling,
+                true,
+                `Function ${call.funcName} should have error handling via null coalescing`
+            );
+        });
+
+        // Verify specific functions are found
+        const functionNames = fallibleCalls.map(call => call.funcName);
+        assert.ok(functionNames.includes('parse_json'), 'Should find parse_json');
+        assert.ok(functionNames.includes('parse_common_log'), 'Should find parse_common_log');
+        assert.ok(functionNames.includes('parse_groks'), 'Should find parse_groks');
+    });
 });
