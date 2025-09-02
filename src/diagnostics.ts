@@ -19,6 +19,7 @@ export class VrlDiagnosticsProvider {
         console.log(`[VRL] Document has ${lines.length} lines`);
 
         this.checkDocumentSyntax(text, lines, diagnostics);
+        this.checkFallibleFunctions(text, diagnostics);
         this.checkControlFlowSyntax(lines, diagnostics);
 
         for (let i = 0; i < lines.length; i++) {
@@ -110,61 +111,7 @@ export class VrlDiagnosticsProvider {
         lineNumber: number,
         diagnostics: vscode.Diagnostic[]
     ): void {
-        for (const func of FALLIBLE_FUNCTIONS) {
-            const funcCallPattern = new RegExp(`\\b${func}\\s*\\(`);
-            const match = line.match(funcCallPattern);
-
-            if (match) {
-                console.log(`[VRL] Found fallible function call: ${func} in line: ${line}`);
-                const hasErrorHandling = this.hasProperErrorHandling(line, func);
-                console.log(`[VRL] Has error handling: ${hasErrorHandling}`);
-                if (!hasErrorHandling) {
-                    const startPos = line.indexOf(func);
-                    const diagnostic = new vscode.Diagnostic(
-                        new vscode.Range(lineNumber, startPos, lineNumber, startPos + func.length),
-                        `Fallible function '${func}' requires error handling. Use '${func}!(...)' to abort on error, '${func}(...) ?? default' for fallback, or 'result, err = ${func}(...)'`,
-                        vscode.DiagnosticSeverity.Error
-                    );
-                    diagnostic.code = 'missing-error-handling';
-
-                    const fixes: vscode.CodeAction[] = [];
-
-                    const bangFix = new vscode.CodeAction(
-                        `Use ${func}!(...) - abort on error`,
-                        vscode.CodeActionKind.QuickFix
-                    );
-                    bangFix.edit = new vscode.WorkspaceEdit();
-                    bangFix.edit.replace(
-                        vscode.Uri.file(''),
-                        new vscode.Range(
-                            lineNumber,
-                            startPos + func.length,
-                            lineNumber,
-                            startPos + func.length
-                        ),
-                        '!'
-                    );
-                    fixes.push(bangFix);
-
-                    diagnostic.relatedInformation = [
-                        new vscode.DiagnosticRelatedInformation(
-                            new vscode.Location(
-                                vscode.Uri.file(''),
-                                new vscode.Range(
-                                    lineNumber,
-                                    startPos,
-                                    lineNumber,
-                                    startPos + func.length
-                                )
-                            ),
-                            'Fallible functions must handle potential errors explicitly'
-                        ),
-                    ];
-
-                    diagnostics.push(diagnostic);
-                }
-            }
-        }
+        // Skip line-by-line fallible function checking - now handled at document level
 
         const functionPattern = /\b([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/g;
 
@@ -230,12 +177,132 @@ export class VrlDiagnosticsProvider {
         }
     }
 
-    private hasProperErrorHandling(line: string, funcName: string): boolean {
-        const hasBang = new RegExp(`\\b${funcName}!\\s*\\(`).test(line);
-        const hasNullCoalescing = line.includes('??');
-        const hasExplicitErrorHandling = /\w+\s*,\s*\w+\s*=/.test(line);
+    private checkFallibleFunctions(text: string, diagnostics: vscode.Diagnostic[]): void {
+        // Normalize whitespace to handle multi-line function calls
+        const normalizedText = text.replace(/\s+/g, ' ').trim();
 
-        return hasBang || hasNullCoalescing || hasExplicitErrorHandling;
+        for (const func of FALLIBLE_FUNCTIONS) {
+            // Look for function calls with optional ! modifier
+            const funcCallPattern = new RegExp(`\\b${func}([!]?)\\s*\\(`, 'g');
+            let match;
+
+            while ((match = funcCallPattern.exec(normalizedText)) !== null) {
+                const hasBang = match[1] === '!';
+                const hasNullCoalescing = this.hasNullCoalescingAfterFunction(
+                    normalizedText,
+                    match.index,
+                    func
+                );
+                const hasExplicitErrorHandling = /\w+\s*,\s*\w+\s*=/.test(normalizedText);
+
+                const hasErrorHandling = hasBang || hasNullCoalescing || hasExplicitErrorHandling;
+
+                console.log(
+                    `[VRL] Found fallible function call: ${func}${match[1]} at position ${match.index}`
+                );
+                console.log(
+                    `[VRL] Has error handling: ${hasErrorHandling} (bang: ${hasBang}, ??: ${hasNullCoalescing}, explicit: ${hasExplicitErrorHandling})`
+                );
+
+                if (!hasErrorHandling) {
+                    // Find the position in the original text (this is approximate since we normalized)
+                    const linePosition = this.findLinePositionOfFunction(text, func, match.index);
+
+                    const diagnostic = new vscode.Diagnostic(
+                        new vscode.Range(
+                            linePosition.line,
+                            linePosition.startChar,
+                            linePosition.line,
+                            linePosition.endChar
+                        ),
+                        `Fallible function '${func}' requires error handling. Use '${func}!(...)' to abort on error, '${func}(...) ?? default' for fallback, or 'result, err = ${func}(...)'`,
+                        vscode.DiagnosticSeverity.Error
+                    );
+                    diagnostic.code = 'missing-error-handling';
+
+                    diagnostic.relatedInformation = [
+                        new vscode.DiagnosticRelatedInformation(
+                            new vscode.Location(
+                                vscode.Uri.file(''),
+                                new vscode.Range(
+                                    linePosition.line,
+                                    linePosition.startChar,
+                                    linePosition.line,
+                                    linePosition.endChar
+                                )
+                            ),
+                            'Fallible functions must handle potential errors explicitly'
+                        ),
+                    ];
+
+                    diagnostics.push(diagnostic);
+                }
+            }
+        }
+    }
+
+    private hasNullCoalescingAfterFunction(
+        text: string,
+        functionStartPos: number,
+        funcName: string
+    ): boolean {
+        // Look for ?? after the complete function call
+        // Find the matching closing parenthesis for this function call
+        let parenCount = 0;
+        let currentPos = functionStartPos;
+
+        // Find the opening parenthesis
+        while (currentPos < text.length && text[currentPos] !== '(') {
+            currentPos++;
+        }
+
+        if (currentPos >= text.length) {return false;}
+
+        currentPos++; // Skip the opening (
+        parenCount = 1;
+
+        // Find the matching closing parenthesis
+        while (currentPos < text.length && parenCount > 0) {
+            if (text[currentPos] === '(') {
+                parenCount++;
+            } else if (text[currentPos] === ')') {
+                parenCount--;
+            }
+            currentPos++;
+        }
+
+        // Now look for ?? after the closing parenthesis
+        const afterFunction = text.slice(currentPos);
+        return afterFunction.trim().startsWith('??');
+    }
+
+    private findLinePositionOfFunction(
+        text: string,
+        funcName: string,
+        normalizedPosition: number
+    ): { line: number; startChar: number; endChar: number } {
+        // This is a simplified approach - find the first occurrence of the function in the original text
+        // For a more accurate implementation, we'd need to map normalized positions back to original positions
+        const lines = text.split('\n');
+
+        for (let lineNum = 0; lineNum < lines.length; lineNum++) {
+            const line = lines[lineNum];
+            const funcIndex = line.indexOf(funcName);
+            if (funcIndex !== -1) {
+                // Check if this is likely a function call (followed by optional ! and ()
+                const afterFunc = line.slice(funcIndex + funcName.length);
+                if (/^[!]?\s*\(/.test(afterFunc)) {
+                    return {
+                        line: lineNum,
+                        startChar: funcIndex,
+                        endChar: funcIndex + funcName.length,
+                    };
+                }
+            }
+        }
+
+        // Fallback to first line if not found
+        return { line: 0, startChar: 0, endChar: funcName.length };
     }
 
     private getSimilarFunctions(input: string): string[] {
