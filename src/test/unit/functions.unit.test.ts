@@ -30,6 +30,7 @@ suite('VRL Functions Unit Tests', () => {
             'to_int',
             'to_float',
             'to_string',
+            'timestamp',
             'upcase',
             'downcase',
             'encode_base64',
@@ -52,6 +53,7 @@ suite('VRL Functions Unit Tests', () => {
             'parse_cef',
             'parse_json',
             'parse_timestamp',
+            'timestamp',
             'to_int',
             'to_float',
             'decode_base64',
@@ -106,6 +108,11 @@ suite('VRL Functions Unit Tests', () => {
                 expectedParams: ['text'],
                 expectedReturnType: 'string',
             },
+            {
+                name: 'timestamp',
+                expectedParams: ['value'],
+                expectedReturnType: 'timestamp',
+            },
         ];
 
         testCases.forEach(({ name, expectedParams, expectedReturnType }) => {
@@ -132,6 +139,33 @@ suite('VRL Functions Unit Tests', () => {
                 );
             });
         });
+    });
+
+    test('Should have timestamp function with correct signature', () => {
+        const timestampFunc = getFunctionByName('timestamp');
+        assert.ok(timestampFunc, 'timestamp function should exist');
+        assert.strictEqual(timestampFunc!.name, 'timestamp');
+        assert.strictEqual(timestampFunc!.fallible, true, 'timestamp should be fallible');
+        assert.strictEqual(timestampFunc!.category, 'coerce');
+        assert.strictEqual(timestampFunc!.returnType, 'timestamp');
+        assert.strictEqual(
+            timestampFunc!.parameters.length,
+            1,
+            'timestamp should have 1 parameter'
+        );
+
+        // Check parameter name and type
+        const expectedParam = { name: 'value', type: 'any', optional: false };
+        const actualParam = timestampFunc!.parameters[0];
+        assert.strictEqual(actualParam.name, expectedParam.name, 'Parameter should be named value');
+        assert.strictEqual(actualParam.type, expectedParam.type, 'Parameter should have type any');
+        assert.strictEqual(
+            actualParam.optional || false,
+            expectedParam.optional,
+            'Parameter should be required'
+        );
+
+        console.log('✓ timestamp function correctly defined as type checker function');
     });
 });
 

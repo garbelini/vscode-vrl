@@ -5,11 +5,13 @@
 .data = parse_json(.input) 
 .timestamp = parse_timestamp(.date, "%Y-%m-%d")
 .number = to_int(.value)
+.bad_timestamp_validation = timestamp(.incoming_timestamp)
 
 # These are correct - should not show errors:
 .good_result = parse_cef!(.message)
 .safe_data = parse_json(.input) ?? {}
 .parsed_time = parse_timestamp(.date, "%Y-%m-%d") ?? now()
+.good_timestamp_validation = timestamp!("2020-10-10T16:00:00Z")
 
 # This should show unknown function error:
 .bad = invalid_function(.data)
